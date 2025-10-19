@@ -54,6 +54,18 @@ def add_customer(name: str , mail: str , hashed_password: str , delivery_address
 
 #--------------------------------------------------------------------------------------------------------------------------------------------
 
+# Function to check if a customer already exists with the given mail
+def get_customer_by_email(mail: str):
+
+     with Session(engine) as session:
+          cust = session.exec(
+               select(Customer).where(Customer.mail == mail)
+               ).first()
+          return cust 
+          # Returns the customer if found, else returns None
+
+#--------------------------------------------------------------------------------------------------------------------------------------------
+
 # Function to make a product item
 def add_product(name:str , price:float , stock:int):
      
