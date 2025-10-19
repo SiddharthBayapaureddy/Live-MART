@@ -29,7 +29,7 @@ class Customer(SQLModel , table=True):
     phone_number: Optional[str] = None
 
     # Additional Details
-    no_of_purchases : int
+    no_of_purchases : int = 0
     preferences: Optional[str] = None
 
 
