@@ -2,6 +2,10 @@
 
 # Importing FastAPI
 from fastapi import FastAPI , HTTPException , status # HTTPException for exception handling
+
+# For file management
+from fastapi.staticfiles import StaticFiles
+
 from sqlmodel import Session, select
 from contextlib import asynccontextmanager
 
@@ -36,10 +40,20 @@ from schemas import *
 # Building the App
 # -----------------------------
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
+    create_db_and_tables()
+    yield
+
+
 # Initializing an FastAPI app instance
-app = FastAPI(title="Live MART")
+app = FastAPI(title="Live MART" , lifespan=lifespan)
 
 
+# Mounting the app to folder at "../data"
+app.mount("/static" , StaticFiles(directory="../data") , name="static")
 
 # Creating endpoints
 
@@ -57,7 +71,7 @@ def root():
 async def signup(customer : CustomerCreate):
 
     # Check if email already exists
-    exists = get_customer_by_email(customer.mail)
+    exists = await run_in_threadpool(get_customer_by_email, customer.mail)
 
     if exists:
         raise HTTPException(status_code=400 , detail="Email Already Registered")
@@ -71,7 +85,7 @@ async def signup(customer : CustomerCreate):
         customer.mail,
         hashed_password,
         customer.delivery_address,
-        customer.city,
+        customer.city,  
         customer.state,
         customer.pincode,
         customer.phone_number
@@ -112,7 +126,7 @@ async def login(req : LoginRequest):
 # -------------------------------------------------------------------------------------------------------------------------------------------------
 
 # Product Details Endpoint - GET ---> Accepts 
-@app.get("/products/info/{product_id}")
+@app.get("/products/info/{product_id}" , response_model=ProductRead)
 async def get_product(product_id: int):
     def _get():
         with Session(engine) as session:
@@ -133,12 +147,12 @@ async def get_product(product_id: int):
 # Adding Product Endpoint - POST ---> Accepts JSON Body as response
 @app.post("/products/add/" , response_model=ProductRead , status_code=status.HTTP_201_CREATED)
 async def create_product_endpoint(product : ProductCreate):
-    product = await run_in_threadpool(add_product , product.name , product.price , product.stock)
+    new_product = await run_in_threadpool(add_product , product.name , product.price , product.stock , product.description , product.category)
 
-    if not product:
+    if not new_product:
         raise HTTPException(status_code=500 , detail="Failed to create product. Try again! Oops lol")
     
-    return product
+    return new_product
 
 
 # -------------------------------------------------------------------------------------------------------------------------------------------------
